@@ -10,6 +10,8 @@ Example:
 `http://localhost:3000/customers`
 `http://localhost:3000/api`
 
+You can set your own port byt adding `.env` file following the `.env.example`
+
 ## Installation
 
 ```bash
