@@ -2,10 +2,13 @@ import { Injectable, InternalServerErrorException, NotFoundException } from '@ne
 import { Customer } from './interfaces/customer.interface';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
+import { faker } from '@faker-js/faker';
+import { createRandomCustomer } from './mockData/customers.mock';
 
 @Injectable()
 export class CustomersService {
-  private readonly customers: Customer[] = [];
+  private customers: Customer[] = faker.helpers.multiple(createRandomCustomer, { count: 100 });
+  private maxCustomers = 1000000;
 
   findAll(): Customer[] {
     return this.customers;
@@ -18,42 +21,53 @@ export class CustomersService {
   }
 
   create(customer: CreateCustomerDto): Customer {
-    const customerId = this.getRandomInt(1, 1000000);
-    const newCustomer: Customer = {
-      ...customer,
-      id: customerId
+    if (this.customers.length >= this.maxCustomers) {
+      throw new InternalServerErrorException('Customers limit reached');
     }
+
+    const { firstName, lastName, age, middleName } = customer;
+
+    const newCustomer: Customer = {
+      id: this.generateUniqueCustomerId(),
+      firstName,
+      lastName,
+      age
+    }
+    if (middleName) newCustomer.middleName = middleName;
 
     this.customers.push(newCustomer);
     return newCustomer;
   }
 
   update(id: number, customer: UpdateCustomerDto): Customer {
-    console.log('ID received: ', id);
     const customerIndex = this.customers.findIndex((customer) => customer.id === id);
-    console.log('customerIndex: ', customerIndex);
-    console.log('find: ', this.findCustomerById(id));
 
     if (customerIndex === -1) throw new NotFoundException(`Customer with id ${id} not found.`);
+
+    const { firstName, lastName, age, middleName } = customer;
+
     const updatedCustomer: Customer = {
-      ...customer,
-      id
+      id,
+      firstName,
+      lastName,
+      age
     }
+    if (middleName) updatedCustomer.middleName = middleName;
+
     this.customers[customerIndex] = updatedCustomer;
     return this.customers[customerIndex];
   }
 
+  private generateUniqueCustomerId(): number {
+    let newId: number;
+    do {
+      newId = this.getRandomInt(1, 1000000);
+    } while (!this.isIdUnique(newId));
+    return newId;
+  }
+
   private getRandomInt(min: number, max: number): number {
-    if (this.customers.length >= max) {
-      throw new InternalServerErrorException('Customers limit reached');
-    }
-    min = Math.ceil(min);
-    max = Math.ceil(max);
-    const randomNumber = Math.floor(Math.random() * (max - min + 1)) + min;
-    if (this.isIdUnique(randomNumber)) {
-      this.getRandomInt(min, max);
-    }
-    return randomNumber
+    return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
   private findCustomerById(id: number): Customer {
